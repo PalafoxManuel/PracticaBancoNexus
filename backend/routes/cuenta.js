@@ -7,22 +7,38 @@ const router = Router();
 
 /**
  * GET /api/cuenta/:numeroCuenta
- * Devuelve datos de la cuenta y su historial de movimientos.
+ * Devuelve datos de la cuenta, cliente asociado (populate)
+ * y su historial de movimientos.
  */
 router.get('/:numeroCuenta', async (req, res) => {
   try {
-    const cuenta = await Cuenta.findOne({ numeroCuenta: req.params.numeroCuenta });
+    // 1) Buscar la cuenta y poblar el cliente
+    const cuenta = await Cuenta
+      .findOne({ numeroCuenta: req.params.numeroCuenta })
+      .populate('clienteId', 'nombre apellido curp');  // <–– aquí
+
     if (!cuenta) {
       return res.status(404).json({ error: 'Cuenta no encontrada' });
     }
 
+    // 2) Traer historial de transacciones
     const movimientos = await Transaccion
       .find({ cuentaId: cuenta._id })
-      .sort({ fecha: -1 });
+      .sort({ fecha: -1 })
+      .select('tipo monto fecha sucursal');
 
+    // 3) Responder con toda la información
     return res.json({
-      numeroCuenta: cuenta.numeroCuenta,
-      saldo:        cuenta.saldo,
+      cliente: {
+        id:       cuenta.clienteId._id,
+        nombre:   cuenta.clienteId.nombre,
+        apellido: cuenta.clienteId.apellido,
+        curp:     cuenta.clienteId.curp
+      },
+      cuenta: {
+        numero: cuenta.numeroCuenta,
+        saldo:  cuenta.saldo
+      },
       movimientos
     });
   } catch (err) {
