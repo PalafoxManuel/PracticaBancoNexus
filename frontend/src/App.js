@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
@@ -9,6 +9,7 @@ function App() {
   const [error, setError] = useState(null);
   const [mensaje, setMensaje] = useState(null);
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [sucursal, setSucursal] = useState('');
 
   const consultarCuenta = async () => {
     try {
@@ -26,26 +27,34 @@ function App() {
   const realizarOperacion = async () => {
     setMensaje(null);
     try {
-      const res = await fetch(`http://localhost:3000/api/${tipo}`, {
+      const res = await fetch(`http://localhost:3000/api/cuenta/${tipo}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cuenta: cuenta, monto: parseFloat(monto) }),
+        body: JSON.stringify({
+          numeroCuenta: cuenta,
+          sucursal: sucursal,
+          monto: parseFloat(monto)
+        }),
       });
 
       const result = await res.json();
 
-      if (!res.ok) throw new Error(result.message || 'Error en la operación');
+      if (!res.ok) throw new Error(result.error || 'Error en la operación');
 
-      setMensaje(result.message);
+      setMensaje(result.mensaje);
       setError(null);
       setMostrarModal(false);
       setMonto('');
-      consultarCuenta(); // actualizar datos
+      setTipo(null);
+      setSucursal('');
+      consultarCuenta();
     } catch (err) {
       setMensaje(null);
       setError(err.message);
     }
   };
+
+
 
   return (
     <div className="container py-5">
@@ -90,11 +99,11 @@ function App() {
                   )}
                   <h6 className="mt-4">Transacciones</h6>
                   <ul className="list-group">
-                    {datos.transacciones.map((t, idx) => (
+                    {datos.movimientos.map((t, idx) => (
                       <li className="list-group-item d-flex justify-content-between align-items-center" key={idx}>
                         <span>{t.tipo}</span>
-                        <span className={t.tipo === 'depósito' ? 'text-success fw-bold' : 'text-danger fw-bold'}>
-                          {t.tipo === 'depósito' ? '+' : '-'}${t.monto}
+                        <span className={t.tipo === 'deposito' ? 'text-success fw-bold' : 'text-danger fw-bold'}>
+                          {t.tipo === 'deposito' ? '+' : '-'}${t.monto}
                         </span>
                         <small className="text-muted">{t.fecha}</small>
                       </li>
@@ -128,14 +137,41 @@ function App() {
                 ) : (
                   <>
                     <p>{tipo === 'deposito' ? 'Depósito' : 'Retiro'} seleccionado</p>
-                    <input
-                      type="number"
-                      value={monto}
-                      onChange={(e) => setMonto(e.target.value)}
-                      className="form-control mb-3"
-                      placeholder="Ingresa el monto"
-                      min={0}
-                    />
+
+                    <div className="mb-3">
+                      <label className="form-label">Sucursal</label>
+                      <select
+                        className="form-select"
+                        onChange={(e) => setSucursal(e.target.value)}
+                        defaultValue=""
+                      >
+                        <option value="" disabled>Selecciona una sucursal</option>
+                        <option value="CDMX">CDMX</option>
+                        <option value="GDL">Guadalajara</option>
+                        <option value="MTY">Monterrey</option>
+                        <option value="QRO">Querétaro</option>
+                      </select>
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="form-label">Monto</label>
+                      <input
+                        type="number"
+                        value={monto}
+                        onChange={(e) => setMonto(e.target.value)}
+                        onKeyDown={(e) => {
+                          const invalidChars = ['-', '+', 'e', 'E'];
+                          if (invalidChars.includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        className="form-control"
+                        placeholder="Ingresa el monto"
+                        min={0}
+                      />
+                    </div>
+
+
                     <div className="d-flex justify-content-between">
                       <button className="btn btn-secondary" onClick={() => {
                         setTipo(null);
@@ -157,6 +193,7 @@ function App() {
           </div>
         </div>
       )}
+
 
     </div>
   );
