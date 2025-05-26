@@ -17,6 +17,7 @@ function App() {
       if (!res.ok) throw new Error('Cuenta no encontrada o error en la conexión.');
       const data = await res.json();
       setDatos(data);
+      console.log(data);
       setError(null);
     } catch (err) {
       setDatos(null);
@@ -80,16 +81,13 @@ function App() {
                   Consultar
                 </button>
               </div>
-
-              {error && <div className="alert alert-danger">{error}</div>}
-              {mensaje && <div className="alert alert-success">{mensaje}</div>}
-
               {datos && (
                 <div className="mt-4">
                   {datos && (
                     <>
                       <div className="d-flex justify-content-between align-items-center mb-2">
-                        <h5 className="mb-0">Cliente: <strong>{datos.cliente}</strong></h5>
+                        <h5 className="mb-0">Cliente: <strong>{datos.nombre}</strong></h5>
+
                         <button className="btn btn-secondary btn-sm" onClick={() => setMostrarModal(true)}>
                           Realizar transacción
                         </button>
@@ -97,7 +95,12 @@ function App() {
                       <p>Saldo actual: <span className="fw-bold text-success">${datos.saldo}</span></p>
                     </>
                   )}
-                  <h6 className="mt-4">Transacciones</h6>
+                  <div className="row">
+                    <h6 className="mt-4 col-3">Transacciones</h6>
+                    <h6 className="mt-4 col-3">Monto</h6>
+                    <h6 className="mt-4 col-3">Sucursal</h6>
+                    <h6 className="mt-4 col-3">Transacciones</h6>
+                  </div>
                   <ul className="list-group">
                     {datos.movimientos.map((t, idx) => (
                       <li className="list-group-item d-flex justify-content-between align-items-center" key={idx}>
@@ -105,6 +108,7 @@ function App() {
                         <span className={t.tipo === 'deposito' ? 'text-success fw-bold' : 'text-danger fw-bold'}>
                           {t.tipo === 'deposito' ? '+' : '-'}${t.monto}
                         </span>
+                        <span>{t.sucursal}</span>
                         <small className="text-muted">{t.fecha}</small>
                       </li>
                     ))}
