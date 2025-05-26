@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
   const [cuenta, setCuenta] = useState('');
+  const [monto, setMonto] = useState('');
+  const [tipo, setTipo] = useState(null);
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
+  const [mensaje, setMensaje] = useState(null);
+  const [mostrarModal, setMostrarModal] = useState(false);
 
   const consultarCuenta = async () => {
     try {
@@ -18,11 +23,35 @@ function App() {
     }
   };
 
+  const realizarOperacion = async () => {
+    setMensaje(null);
+    try {
+      const res = await fetch(`http://localhost:3000/api/${tipo}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cuenta: cuenta, monto: parseFloat(monto) }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) throw new Error(result.message || 'Error en la operación');
+
+      setMensaje(result.message);
+      setError(null);
+      setMostrarModal(false);
+      setMonto('');
+      consultarCuenta(); // actualizar datos
+    } catch (err) {
+      setMensaje(null);
+      setError(err.message);
+    }
+  };
+
   return (
     <div className="container py-5">
       <div className="text-center mb-4">
         <h1 className="text-primary">Banco Nexus</h1>
-        <p className="text-muted">Consulta de saldo y movimientos</p>
+        <p className="text-muted">Consulta de saldo y operaciones</p>
       </div>
 
       <div className="row justify-content-center">
@@ -44,30 +73,91 @@ function App() {
               </div>
 
               {error && <div className="alert alert-danger">{error}</div>}
+              {mensaje && <div className="alert alert-success">{mensaje}</div>}
 
               {datos && (
                 <div className="mt-4">
-                  <h5 className="mb-2">Cliente: <strong>{datos.cliente}</strong></h5>
-                  <p>Saldo actual: <span className="fw-bold text-success">${datos.saldo}</span></p>
-
+                  {datos && (
+                    <>
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <h5 className="mb-0">Cliente: <strong>{datos.cliente}</strong></h5>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setMostrarModal(true)}>
+                          Realizar transacción
+                        </button>
+                      </div>
+                      <p>Saldo actual: <span className="fw-bold text-success">${datos.saldo}</span></p>
+                    </>
+                  )}
                   <h6 className="mt-4">Transacciones</h6>
                   <ul className="list-group">
-                  {datos.transacciones.map((t, idx) => (
-                    <li className="list-group-item d-flex justify-content-between align-items-center" key={idx}>
-                      <span>{t.tipo}</span>
-                      <span className={t.tipo === 'depósito' ? 'text-success fw-bold' : 'text-danger fw-bold'}>
-                        {t.tipo === 'depósito' ? '+' : '-'}${t.monto}
-                      </span>
-                      <small className="text-muted">{t.fecha}</small>
-                    </li>
-                  ))}
-                </ul>
+                    {datos.transacciones.map((t, idx) => (
+                      <li className="list-group-item d-flex justify-content-between align-items-center" key={idx}>
+                        <span>{t.tipo}</span>
+                        <span className={t.tipo === 'depósito' ? 'text-success fw-bold' : 'text-danger fw-bold'}>
+                          {t.tipo === 'depósito' ? '+' : '-'}${t.monto}
+                        </span>
+                        <small className="text-muted">{t.fecha}</small>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal */}
+      {mostrarModal && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Realizar transacción</h5>
+                <button type="button" className="btn-close" onClick={() => setMostrarModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                {!tipo ? (
+                  <>
+                    <p>¿Qué tipo de transacción deseas realizar?</p>
+                    <div className="d-flex justify-content-around">
+                      <button className="btn btn-success" onClick={() => setTipo('deposito')}>Depositar</button>
+                      <button className="btn btn-danger" onClick={() => setTipo('retiro')}>Retirar</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p>{tipo === 'deposito' ? 'Depósito' : 'Retiro'} seleccionado</p>
+                    <input
+                      type="number"
+                      value={monto}
+                      onChange={(e) => setMonto(e.target.value)}
+                      className="form-control mb-3"
+                      placeholder="Ingresa el monto"
+                      min={0}
+                    />
+                    <div className="d-flex justify-content-between">
+                      <button className="btn btn-secondary" onClick={() => {
+                        setTipo(null);
+                        setMonto('');
+                      }}>Atrás</button>
+                      <button className="btn btn-primary" onClick={realizarOperacion}>Aceptar</button>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-outline-secondary" onClick={() => {
+                  setMostrarModal(false);
+                  setTipo(null);
+                  setMonto('');
+                }}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
