@@ -43,7 +43,7 @@ router.post('/deposito', async (req, res) => {
     if (!cuenta) return res.status(404).json({ error: 'Cuenta no encontrada' });
     if (monto <= 0) return res.status(400).json({ error: 'Monto debe ser mayor que cero' });
 
-    await Transaccion.create({ cuentaId: cuenta._id, sucursal, tipo: 'depósito', monto });
+    await Transaccion.create({ cuentaId: cuenta._id, sucursal, tipo: 'deposito', monto });
     cuenta.saldo += monto;
     await cuenta.save();
 

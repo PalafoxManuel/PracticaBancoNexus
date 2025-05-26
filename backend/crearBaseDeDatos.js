@@ -56,7 +56,7 @@ async function main() {
       cuentaId: cta._id,
       sucursal: sucursales[Math.floor(Math.random() * sucursales.length)],
       fecha:    new Date(),
-      tipo:     'depósito',
+      tipo:     'deposito',
       monto:    Math.floor(100 + Math.random() * 900)
     },
     {
