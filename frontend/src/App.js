@@ -102,7 +102,7 @@ function App() {
                   {datos && (
                     <>
                       <div className="d-flex justify-content-between align-items-center mb-2">
-                        <h5 className="mb-0">Cliente: <strong>{datos.nombre}</strong></h5>
+                        <h5 className="mb-0">Cliente: <strong>{datos.cliente}</strong></h5>
 
                         <button className="btn btn-secondary btn-sm" onClick={() => setMostrarModal(true)}>
                           Realizar transacción
