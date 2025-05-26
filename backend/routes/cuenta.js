@@ -21,24 +21,18 @@ router.get('/:numeroCuenta', async (req, res) => {
       return res.status(404).json({ error: 'Cuenta no encontrada' });
     }
 
-    // 2) Traer historial de transacciones
+    // Construye la cadena de nombre completo:
+    const nombreCompleto = `${cuenta.clienteId.nombre} ${cuenta.clienteId.apellido}`;
     const movimientos = await Transaccion
       .find({ cuentaId: cuenta._id })
       .sort({ fecha: -1 })
       .select('tipo monto fecha sucursal');
 
-    // 3) Responder con toda la información
     return res.json({
-      cliente: {
-        id:       cuenta.clienteId._id,
-        nombre:   cuenta.clienteId.nombre,
-        apellido: cuenta.clienteId.apellido,
-        curp:     cuenta.clienteId.curp
-      },
-      cuenta: {
-        numero: cuenta.numeroCuenta,
-        saldo:  cuenta.saldo
-      },
+      cliente:      nombreCompleto,            // ahora un string
+      curp:         cuenta.clienteId.curp, // si lo necesitas por separado
+      numeroCuenta: cuenta.numeroCuenta,
+      saldo:        cuenta.saldo,
       movimientos
     });
   } catch (err) {
@@ -90,8 +84,12 @@ router.post('/retiro', async (req, res) => {
     return res.json({ mensaje: 'Retiro exitoso', saldo: cuenta.saldo });
   } catch (err) {
     console.error(err);
+    if (err.name === 'ValidationError') {
+      const mensajes = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ error: mensajes.join(', ') });
+    }
     return res.status(500).json({ error: 'Error en el servidor' });
-  }
+    }
 });
 
 module.exports = router;

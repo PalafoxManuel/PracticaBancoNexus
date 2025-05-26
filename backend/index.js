@@ -3,6 +3,11 @@ require('dotenv').config();       // 1) Carga variables de entorno
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+// registra primero todos los modelos
+require('./modelos/cliente');
+require('./modelos/cuenta');
+require('./modelos/transaccion');
+
 const cuentaRouter = require('./routes/cuenta');
 
 const app = express();
