@@ -10,6 +10,8 @@ function App() {
   const [mensaje, setMensaje] = useState(null);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [sucursal, setSucursal] = useState('');
+  const [errores, setErrores] = useState({ monto: '', sucursal: '' });
+
 
   const consultarCuenta = async () => {
     try {
@@ -26,7 +28,20 @@ function App() {
   };
 
   const realizarOperacion = async () => {
+    setErrores({});
     setMensaje(null);
+    setError(null);
+
+    const erroresLocal = {};
+
+    if (!sucursal) erroresLocal.sucursal = 'Debes seleccionar una sucursal.';
+    if (!monto || parseFloat(monto) <= 0) erroresLocal.monto = 'El monto debe ser mayor a 0.';
+
+    if (Object.keys(erroresLocal).length > 0) {
+      setErrores(erroresLocal);
+      return;
+    }
+
     try {
       const res = await fetch(`http://localhost:3000/api/cuenta/${tipo}`, {
         method: 'POST',
@@ -43,17 +58,19 @@ function App() {
       if (!res.ok) throw new Error(result.error || 'Error en la operación');
 
       setMensaje(result.mensaje);
-      setError(null);
+      consultarCuenta();
       setMostrarModal(false);
       setMonto('');
       setTipo(null);
       setSucursal('');
-      consultarCuenta();
+      setTimeout(() => setMensaje(null), 3000);
     } catch (err) {
-      setMensaje(null);
       setError(err.message);
+      setTimeout(() => setError(null), 3000);
     }
   };
+
+
 
 
 
@@ -63,7 +80,6 @@ function App() {
         <h1 className="text-primary">Banco Nexus</h1>
         <p className="text-muted">Consulta de saldo y operaciones</p>
       </div>
-
       <div className="row justify-content-center">
         <div className="col-md-6">
           <div className="card shadow-sm">
@@ -130,6 +146,8 @@ function App() {
                 <button type="button" className="btn-close" onClick={() => setMostrarModal(false)}></button>
               </div>
               <div className="modal-body">
+                {error && <div className="alert alert-danger">{error}</div>}
+                {mensaje && <div className="alert alert-success">{mensaje}</div>}
                 {!tipo ? (
                   <>
                     <p>¿Qué tipo de transacción deseas realizar?</p>
@@ -145,9 +163,9 @@ function App() {
                     <div className="mb-3">
                       <label className="form-label">Sucursal</label>
                       <select
-                        className="form-select"
+                        className={`form-select ${errores.sucursal ? 'is-invalid' : ''}`}
                         onChange={(e) => setSucursal(e.target.value)}
-                        defaultValue=""
+                        value={sucursal}
                       >
                         <option value="" disabled>Selecciona una sucursal</option>
                         <option value="CDMX">CDMX</option>
@@ -155,6 +173,7 @@ function App() {
                         <option value="MTY">Monterrey</option>
                         <option value="QRO">Querétaro</option>
                       </select>
+                      {errores.sucursal && <div className="invalid-feedback">{errores.sucursal}</div>}
                     </div>
 
                     <div className="mb-3">
@@ -169,11 +188,13 @@ function App() {
                             e.preventDefault();
                           }
                         }}
-                        className="form-control"
+                        className={`form-control ${errores.monto ? 'is-invalid' : ''}`}
                         placeholder="Ingresa el monto"
                         min={0}
                       />
+                      {errores.monto && <div className="invalid-feedback">{errores.monto}</div>}
                     </div>
+
 
 
                     <div className="d-flex justify-content-between">
