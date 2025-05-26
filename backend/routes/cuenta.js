@@ -1,29 +1,80 @@
-const express = require('express');
-const router = express.Router();
-const Cuenta = require('../modelos/cuenta');
-const Cliente = require('../modelos/cliente');
-const Transaccion = require('../modelos/transaccion');
+// backend/routes/cuenta.js
+const { Router }   = require('express');
+const Cuenta       = require('../modelos/cuenta');
+const Transaccion  = require('../modelos/transaccion');
 
-// GET /api/cuenta/:numeroCuenta
+const router = Router();
+
+/**
+ * GET /api/cuenta/:numeroCuenta
+ * Devuelve datos de la cuenta y su historial de movimientos.
+ */
 router.get('/:numeroCuenta', async (req, res) => {
   try {
     const cuenta = await Cuenta.findOne({ numeroCuenta: req.params.numeroCuenta });
-    if (!cuenta) return res.status(404).json({ error: 'Cuenta no encontrada' });
+    if (!cuenta) {
+      return res.status(404).json({ error: 'Cuenta no encontrada' });
+    }
 
-    const cliente = await Cliente.findById(cuenta.clienteId);
-    const transacciones = await Transaccion.find({ cuentaId: cuenta._id });
+    const movimientos = await Transaccion
+      .find({ cuentaId: cuenta._id })
+      .sort({ fecha: -1 });
 
-    res.json({
-      cliente: `${cliente.nombre} ${cliente.apellido}`,
-      saldo: cuenta.saldo,
-      transacciones: transacciones.map(t => ({
-        tipo: t.tipo,
-        monto: t.monto,
-        fecha: t.fecha.toISOString().split('T')[0]
-      }))
+    return res.json({
+      numeroCuenta: cuenta.numeroCuenta,
+      saldo:        cuenta.saldo,
+      movimientos
     });
   } catch (err) {
-    res.status(500).json({ error: 'Error en el servidor' });
+    console.error(err);
+    return res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+/**
+ * POST /api/cuenta/deposito
+ * Body: { numeroCuenta, sucursal, monto }
+ * Registra un depósito y actualiza saldo.
+ */
+router.post('/deposito', async (req, res) => {
+  try {
+    const { numeroCuenta, sucursal, monto } = req.body;
+    const cuenta = await Cuenta.findOne({ numeroCuenta });
+    if (!cuenta) return res.status(404).json({ error: 'Cuenta no encontrada' });
+    if (monto <= 0) return res.status(400).json({ error: 'Monto debe ser mayor que cero' });
+
+    await Transaccion.create({ cuentaId: cuenta._id, sucursal, tipo: 'depósito', monto });
+    cuenta.saldo += monto;
+    await cuenta.save();
+
+    return res.json({ mensaje: 'Depósito exitoso', saldo: cuenta.saldo });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+/**
+ * POST /api/cuenta/retiro
+ * Body: { numeroCuenta, sucursal, monto }
+ * Registra un retiro y actualiza saldo si hay fondos.
+ */
+router.post('/retiro', async (req, res) => {
+  try {
+    const { numeroCuenta, sucursal, monto } = req.body;
+    const cuenta = await Cuenta.findOne({ numeroCuenta });
+    if (!cuenta) return res.status(404).json({ error: 'Cuenta no encontrada' });
+    if (monto <= 0) return res.status(400).json({ error: 'Monto debe ser mayor que cero' });
+    if (cuenta.saldo < monto) return res.status(400).json({ error: 'Saldo insuficiente' });
+
+    await Transaccion.create({ cuentaId: cuenta._id, sucursal, tipo: 'retiro', monto });
+    cuenta.saldo -= monto;
+    await cuenta.save();
+
+    return res.json({ mensaje: 'Retiro exitoso', saldo: cuenta.saldo });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error en el servidor' });
   }
 });
 
