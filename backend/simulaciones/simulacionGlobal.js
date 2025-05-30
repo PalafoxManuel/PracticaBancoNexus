@@ -18,6 +18,7 @@ const consultar = require('./consultaSucursal');
     operar(s, 'deposito', 500, numeroCuenta),
     operar(s, 'retiro',   300, numeroCuenta)
   ]);
+  
   const resultados = await Promise.all(ops);
   console.log('✅ Resultados de operaciones:', resultados);
 

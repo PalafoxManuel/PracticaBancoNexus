@@ -1,21 +1,30 @@
 // backend/index.js
 require('dotenv').config();       // 1) Carga variables de entorno
-const express = require('express');
+const express  = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
+const cors     = require('cors');
 
 // 0) Registrar modelos antes de todo
 require('./modelos/cliente');
 require('./modelos/cuenta');
 require('./modelos/transaccion');
 
+// Importamos el router SSE y la función de broadcast
+const { router: statusRouter, broadcast } = require('./routes/status');
 const cuentaRouter = require('./routes/cuenta');
 
 const app = express();
 
-// 2) Middlewares
+// 1) Middlewares
 app.use(cors());
 app.use(express.json());
+
+// 2) Rutas
+// SSE status
+app.use('/status', statusRouter);
+
+// API de cuenta
+app.use('/api/cuenta', cuentaRouter);
 
 // 3) Conexión a MongoDB
 const uri = process.env.MONGO_URI;
@@ -27,16 +36,19 @@ mongoose
   .then(() => console.log('✅ Conectado a MongoDB'))
   .catch(err => console.error('❌ Error de conexión:', err));
 
-// —— Aquí engancha tus listeners —— 
-mongoose.connection.on('error', err => console.error('Mongo error:', err));
-mongoose.connection.on('disconnected', () => console.warn('Mongo disconnected'));
-mongoose.connection.on('reconnected', () => console.log('Mongo reconnected'));
-
-// 4) Rutas
-//   - GET    /api/cuenta/historial/:numeroCuenta
-//   - POST   /api/cuenta/deposito
-//   - POST   /api/cuenta/retiro
-app.use('/api/cuenta', cuentaRouter);
+// 4) Listeners de estado de conexión
+mongoose.connection.on('error', err => {
+  console.error('Mongo error:', err);
+  broadcast({ status: 'error' });
+});
+mongoose.connection.on('disconnected', () => {
+  console.warn('Mongo disconnected');
+  broadcast({ status: 'disconnected' });
+});
+mongoose.connection.on('reconnected', () => {
+  console.log('Mongo reconnected');
+  broadcast({ status: 'reconnected' });
+});
 
 // 5) Arrancar servidor
 const PORT = process.env.PORT || 3000;
