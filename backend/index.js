@@ -3,7 +3,8 @@ require('dotenv').config();       // 1) Carga variables de entorno
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-// registra primero todos los modelos
+
+// 0) Registrar modelos antes de todo
 require('./modelos/cliente');
 require('./modelos/cuenta');
 require('./modelos/transaccion');
@@ -25,6 +26,11 @@ mongoose
   })
   .then(() => console.log('✅ Conectado a MongoDB'))
   .catch(err => console.error('❌ Error de conexión:', err));
+
+// —— Aquí engancha tus listeners —— 
+mongoose.connection.on('error', err => console.error('Mongo error:', err));
+mongoose.connection.on('disconnected', () => console.warn('Mongo disconnected'));
+mongoose.connection.on('reconnected', () => console.log('Mongo reconnected'));
 
 // 4) Rutas
 //   - GET    /api/cuenta/historial/:numeroCuenta
